@@ -45,9 +45,12 @@
 #include <string.h>
 
 #include "vfs.h"
+#include "xil_printf.h"
+
+#define FTPD_DEBUG 0
 
 #ifdef FTPD_DEBUG
-int dbg_printf(const char *fmt, ...);
+#define dbg_printf(format, ...) printf((format),##__VA_ARGS__)
 #else
 #ifdef _MSC_VER
 #define dbg_printf(x) /* x */
@@ -487,16 +490,16 @@ static void send_next_directory(struct ftpd_datastate *fsd, struct tcp_pcb *pcb,
 			fsd->vfs_dirent = NULL;
 		} else {
 			vfs_stat_t st;
-			time_t current_time;
+			Time_t current_time;
 			int current_year;
 			struct tm *s_time;
 
 			time(&current_time);
-			s_time = gmtime(&current_time);
+			s_time = getmtime(&current_time);
 			current_year = s_time->tm_year;
 
 			vfs_stat(fsd->msgfs->vfs, fsd->vfs_dirent->name, &st);
-			s_time = gmtime(&st.st_mtime);
+			s_time = getmtime(&st.st_mtime);
 			if (s_time->tm_year == current_year)
 				len = sprintf(buffer, "-rw-rw-rw-   1 user     ftp  %11ld %s %02i %02i:%02i %s\r\n", st.st_size, month_table[s_time->tm_mon], s_time->tm_mday, s_time->tm_hour, s_time->tm_min, fsd->vfs_dirent->name);
 			else
@@ -727,6 +730,23 @@ static void cmd_pass(const char *arg, struct tcp_pcb *pcb, struct ftpd_msgstate 
 	 */
 }
 
+
+static void cmd_size(const char *arg, struct tcp_pcb *pcb, struct ftpd_msgstate *fsm)
+{
+
+	if ((!strncmp(arg, "0", 1)) || (!strncmp(arg, "SDCard", 2)))
+		send_msg(pcb, fsm, "212 4");
+	else if (!strncmp(arg, "/", 1))
+	{
+		send_msg(pcb, fsm, "212 4");
+	}
+	else
+	{
+		dbg_printf("Size Err: unknown dir %s\n",arg);
+	}
+}
+
+
 static void cmd_port(const char *arg, struct tcp_pcb *pcb, struct ftpd_msgstate *fsm)
 {
 	int nr;
@@ -774,6 +794,10 @@ static void cmd_pwd(const char *arg, struct tcp_pcb *pcb, struct ftpd_msgstate *
 	if ((path = vfs_getcwd(fsm->vfs, NULL, 0))) {
 		send_msg(pcb, fsm, msg257PWD, path);
 		free(path);
+	}
+	else
+	{
+		dbg_printf("getpwd failed\n");
 	}
 }
 
@@ -973,12 +997,14 @@ static void cmd_type(const char *arg, struct tcp_pcb *pcb, struct ftpd_msgstate 
 {
 	dbg_printf("Got TYPE -%s-\n", arg);
 	
-	if(strcmp(arg, "I") != 0) {
-		send_msg(pcb, fsm, msg502);
-		return;
+	if(!strcmp(arg, "A") || !strcmp(arg, "I") )
+	{
+		send_msg(pcb, fsm, msg200);
 	}
-	
-	send_msg(pcb, fsm, msg200);
+	else
+	{
+		send_msg(pcb, fsm, msg502);
+	}
 }
 
 static void cmd_mode(const char *arg, struct tcp_pcb *pcb, struct ftpd_msgstate *fsm)
@@ -1113,7 +1139,8 @@ static struct ftpd_command ftpd_commands[] = {
 	{"PASS", cmd_pass},
 	{"PORT", cmd_port},
 	{"QUIT", cmd_quit},
-	{"CWD", cmd_cwd},
+	{"SIZE", cmd_size},
+	{"CWD",  cmd_cwd},
 	{"CDUP", cmd_cdup},
 	{"PWD", cmd_pwd},
 	{"XPWD", cmd_pwd},
@@ -1378,6 +1405,8 @@ static err_t ftpd_msgaccept(void *arg, struct tcp_pcb *pcb, err_t err)
 
 void ftpd_init(void)
 {
+	dbg_printf("ftpd_init\n");
+
 	struct tcp_pcb *pcb;
 
 	vfs_load_plugin(vfs_default_fs);

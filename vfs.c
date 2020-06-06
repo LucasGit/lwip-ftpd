@@ -25,7 +25,7 @@
  */
 
 #include "vfs.h"
-#include <src/ff.h>
+#include "ff.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -136,6 +136,6 @@ struct tm dummy = {
 	.tm_hour = 0,
 	.tm_min  = 0
 };
-struct tm* gmtime(time_t* c_t) {
+struct tm* getmtime(Time_t* c_t) {
 	return &dummy;
 }

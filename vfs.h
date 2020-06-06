@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, Philipp Tölke
+/* Copyright (c) 2013, Philipp Tï¿½lke
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,9 @@
 #ifndef INCLUDE_VFS_H
 #define INCLUDE_VFS_H
 
-#include <src/ff.h>
+#include <ff.h>
 #include <stddef.h>
+#include <string.h>
 
 #define vfs_load_plugin(x)
 #define bcopy(src, dest, len) memmove(dest, src, len)
@@ -37,13 +38,13 @@
 typedef struct {
 	short date;
 	short time;
-} time_t;
+} Time_t;
 typedef DIR vfs_dir_t;
 typedef FIL vfs_file_t;
 typedef struct {
 	long st_size;
 	char st_mode;
-	time_t st_mtime;
+	Time_t st_mtime;
 } vfs_stat_t;
 typedef struct {
 	char name[13];
@@ -80,6 +81,6 @@ void vfs_close(vfs_t* vfs);
 int vfs_stat(vfs_t* vfs, const char* filename, vfs_stat_t* st);
 void vfs_closedir(vfs_dir_t* dir);
 vfs_dir_t* vfs_opendir(vfs_t* vfs, const char* path);
-struct tm* gmtime(time_t *c_t);
+struct tm* getmtime(Time_t *c_t);
 
 #endif /* INCLUDE_VFS_H */
